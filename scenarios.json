@@ -1,0 +1,18 @@
+[
+  {
+    "name": "login",
+    "page": "https://example.com/login",
+    "description": "Fill in the email with 'foo@bar.com', fill in the password with 'abc123', then click the 'Sign in' button.",
+    "validation": "The user should be redirected to the dashboard page and see the welcome message 'Welcome back, user!'",
+    "priority": "high",
+    "role": "user"
+  },
+  {
+    "name": "signup",
+    "page": "https://example.com/signup",
+    "description": "Fill in the username with 'newuser', fill in the email with 'new@example.com', and click the 'Register' button.",
+    "validation": "A success message 'Registration complete' should be visible.",
+    "priority": "medium",
+    "role": "admin"
+  }
+]
