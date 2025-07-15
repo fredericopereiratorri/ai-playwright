@@ -1,0 +1,18 @@
+[
+  {
+    "name": "twitch",
+    "page": "https://www.twitch.tv/k13tv",
+    "description": "Vá para a página e verifique que o botão de 'Login' está sendo exibido.",
+    "validation": "O botão de 'Login' está sendo exibido.",
+    "priority": "high",
+    "role": "user"
+  },
+  {
+    "name": "r7",
+    "page": "https://www.r7.com/",
+    "description": "Vá para a página e clique no link 'Esportes'",
+    "validation": "A página de notícias de esportes deverá ser exibida.",
+    "priority": "medium",
+    "role": "admin"
+  }
+]

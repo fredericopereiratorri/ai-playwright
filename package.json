@@ -1,0 +1,27 @@
+{
+  "dependencies": {
+    "@playwright/test": "^1.54.1",
+    "dotenv": "^17.2.0",
+    "openai": "^5.9.1",
+    "playwright": "^1.54.1"
+  },
+  "name": "ai-playwright",
+  "version": "1.0.0",
+  "description": "ai-playwright",
+  "main": "domExtractor.js",
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fredericopereiratorri/ai-playwright.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/fredericopereiratorri/ai-playwright/issues"
+  },
+  "homepage": "https://github.com/fredericopereiratorri/ai-playwright#readme"
+}

@@ -13,7 +13,9 @@ const pagesDir = path.join(__dirname, 'pages');
 
 (async () => {
   const browser = await chromium.launch({ headless: false });
-  const context = await browser.newContext();
+  const context = await browser.newContext({
+    timeout: 20000,
+  });
 
   const results = [];
 
@@ -28,6 +30,7 @@ const pagesDir = path.join(__dirname, 'pages');
 
     const page = await context.newPage();
     await page.goto(url);
+    await page.waitForLoadState('networkidle');
 
     const domFile = path.join(pagesDir, `${name}.json`);
     if (!fs.existsSync(domFile)) {
@@ -41,7 +44,7 @@ const pagesDir = path.join(__dirname, 'pages');
     const dom = fs.readFileSync(domFile, 'utf8');
 
     const prompt = `
-You are a Playwright test assistant.
+You are a Playwright test/QA assistant.
 
 Given this DOM for the page "${name}" (role: ${role}, priority: ${priority}):
 ${dom}
@@ -54,11 +57,20 @@ ${validation}
 
 Please generate a JSON array of steps, which can be actions or validations.
 
+Use **semantic Playwright selectors** wherever possible:
+- Prefer getByRole("button", { name: "Log In" }) for buttons
+- Or getByLabel("Email") for input fields
+- Avoid raw CSS selectors like .btn or .form unless absolutely necessary
+
+Return selectors as **JavaScript strings** to be evaluated later.
+
+---
+
 Format for interaction actions:
 {
   "type": "action",
   "action": "fill" | "click" | "focus",
-  "selector": "Playwright selector string",
+  "selector": "Playwright selector string",  // e.g. "getByRole('button', { name: 'Log In' })"
   "value": "value to fill if action is fill, else null"
 }
 
@@ -66,11 +78,11 @@ Format for validation steps:
 {
   "type": "expect",
   "expectation": "isVisible" | "isEnabled" | "textEquals",
-  "selector": "Playwright selector string",
+  "selector": "Playwright selector string",  // e.g. "getByRole('button', { name: 'Log In' })"
   "value": "value to match (only for textEquals)"
 }
 
-Respond only with the JSON array.
+Respond ONLY with the raw JSON array. Do NOT include any explanation.
 `;
 
     let instructionsJSON;
@@ -106,29 +118,69 @@ Respond only with the JSON array.
       for (const step of instructions) {
         if (step.type === 'action') {
           const { action, selector, value } = step;
+
+          if (action === 'goto') {
+            console.log(`⚠️ Skipping unsupported action "goto"`);
+            continue;
+          }
+
+          let locator;
+          if (/^getBy/.test(selector.trim())) {
+            locator = eval(`page.${selector.trim()}`);
+          } else {
+            locator = page.locator(selector);
+          }
+
           if (action === 'fill') {
             console.log(`✍️ Filling selector "${selector}" with "${value}"`);
-            await page.fill(selector, value);
+            await locator.fill(value);
           } else if (action === 'click') {
             console.log(`🖱️ Clicking selector "${selector}"`);
-            await page.click(selector);
+            await locator.click();
           } else if (action === 'focus') {
             console.log(`🔍 Focusing selector "${selector}"`);
-            await page.focus(selector);
+            await locator.focus();
           } else {
             console.warn(`⚠️ Unknown action "${action}"`);
           }
         } else if (step.type === 'expect') {
           const { expectation, selector, value } = step;
+          console.log(`🔎 Expecting selector "${selector}" to meet condition "${expectation}"`);
+
+          // Optional: screenshot for debug
+          await page.screenshot({ path: `debug_${name}.png`, fullPage: true });
+
+          let locator;
+          if (/^getBy/.test(selector.trim())) {
+            try {
+              locator = eval(`page.${selector.trim()}`);
+            } catch (err) {
+              throw new Error(`❌ Invalid selector: ${selector}\n${err.message}`);
+            }
+          } else {
+            locator = page.locator(selector);
+          }
+
+          // Find the first visible element
+          const total = await locator.count();
+          let locatorToUse = null;
+          for (let i = 0; i < total; i++) {
+            if (await locator.nth(i).isVisible()) {
+              locatorToUse = locator.nth(i);
+              break;
+            }
+          }
+
+          if (!locatorToUse) {
+            throw new Error(`❌ Selector "${selector}" has no visible elements.`);
+          }
+
           if (expectation === 'isVisible') {
-            console.log(`🔎 Expecting selector "${selector}" to be visible`);
-            await expect(page.locator(selector)).toBeVisible();
+            await expect(locatorToUse).toBeVisible();
           } else if (expectation === 'isEnabled') {
-            console.log(`🔎 Expecting selector "${selector}" to be enabled`);
-            await expect(page.locator(selector)).toBeEnabled();
+            await expect(locatorToUse).toBeEnabled();
           } else if (expectation === 'textEquals') {
-            console.log(`🔎 Expecting selector "${selector}" to have text "${value}"`);
-            await expect(page.locator(selector)).toHaveText(value);
+            await expect(locatorToUse).toHaveText(value);
           } else {
             console.warn(`⚠️ Unknown expectation "${expectation}"`);
           }
@@ -150,5 +202,4 @@ Respond only with the JSON array.
   await browser.close();
 
   generateReport(results);
-
 })();
