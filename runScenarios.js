@@ -52,46 +52,46 @@ const scenarios = JSON.parse(fs.readFileSync(path.join(__dirname, 'scenarios.jso
     }
 
     const prompt = `
-You are a Playwright test/QA assistant.
+      You are a Playwright test/QA assistant.
 
-Given this DOM for the page "${name}" (role: ${role}, priority: ${priority}):
-${limitedDomString}
+      Given this DOM for the page "${name}" (role: ${role}, priority: ${priority}):
+      ${limitedDomString}
 
-Given this test scenario (natural language):
-${description}
+      Given this test scenario (natural language):
+      ${description}
 
-Given this expected validation (natural language):
-${validation}
+      Given this expected validation (natural language):
+      ${validation}
 
-Please generate a JSON array of steps, which can be actions or validations.
+      Please generate a JSON array of steps, which can be actions or validations.
 
-Use **semantic Playwright selectors** wherever possible:
-- Prefer getByRole("button", { name: "Log In" }) for buttons
-- Or getByLabel("Email") for input fields
-- Avoid raw CSS selectors like .btn or .form unless absolutely necessary
+      Use **semantic Playwright selectors** wherever possible:
+      - Prefer getByRole("button", { name: "Log In" }) for buttons
+      - Or getByLabel("Email") for input fields
+      - Avoid raw CSS selectors like .btn or .form unless absolutely necessary
 
-Return selectors as **JavaScript strings** to be evaluated later.
+      Return selectors as **JavaScript strings** to be evaluated later.
 
----
+      ---
 
-Format for interaction actions:
-{
-  "type": "action",
-  "action": "fill" | "click" | "focus",
-  "selector": "Playwright selector string",  // e.g. "getByRole('button', { name: 'Log In' })"
-  "value": "value to fill if action is fill, else null"
-}
+      Format for interaction actions:
+      {
+        "type": "action",
+        "action": "fill" | "click" | "focus",
+        "selector": "Playwright selector string",  // e.g. "getByRole('button', { name: 'Log In' })"
+        "value": "value to fill if action is fill, else null"
+      }
 
-Format for validation steps:
-{
-  "type": "expect",
-  "expectation": "isVisible" | "isEnabled" | "textEquals",
-  "selector": "Playwright selector string",  // e.g. "getByRole('button', { name: 'Log In' })"
-  "value": "value to match (only for textEquals)"
-}
+      Format for validation steps:
+      {
+        "type": "expect",
+        "expectation": "isVisible" | "isEnabled" | "textEquals",
+        "selector": "Playwright selector string",  // e.g. "getByRole('button', { name: 'Log In' })"
+        "value": "value to match (only for textEquals)"
+      }
 
-Respond ONLY with the raw JSON array. Do NOT include any explanation.
-`;
+      Respond ONLY with the raw JSON array. Do NOT include any explanation.
+      `;
 
     let instructionsJSON;
     try {
