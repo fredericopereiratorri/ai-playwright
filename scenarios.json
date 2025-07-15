@@ -2,9 +2,9 @@
   {
     "name": "twitch",
     "page": "https://www.twitch.tv/k13tv",
-    "description": "Vá para a página e verifique que o botão de 'Log In' está sendo exibido. E clique no botão 'Log In'",
-    "validation": "A página de 'Log In' será exibida.",
-    "priority": "high",
+    "description": "Go to page and click on 'Log In' button. Verify the 'Log In' form is displayed as a consequence.",
+    "validation": "You are on the 'Log In' page.",
+    "priority": 1,
     "role": "user"
   }
 ]

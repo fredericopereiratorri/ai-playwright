@@ -5,15 +5,17 @@ const { chromium } = require('playwright');
 const { OpenAI } = require('openai');
 const { expect } = require('@playwright/test');
 const { generateReport } = require('./reportGenerator');
-const { extractDOM } = require('./domExtractor');
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const scenarios = JSON.parse(fs.readFileSync(path.join(__dirname, 'scenarios.json'), 'utf8'));
+const pagesDir = path.join(__dirname, 'pages');
 
 (async () => {
   const browser = await chromium.launch({ headless: false });
-  const context = await browser.newContext({ timeout: 20000 });
+  const context = await browser.newContext({
+    timeout: 20000,
+  });
 
   const results = [];
 
@@ -30,32 +32,22 @@ const scenarios = JSON.parse(fs.readFileSync(path.join(__dirname, 'scenarios.jso
     await page.goto(url);
     await page.waitForLoadState('networkidle');
 
-    let dom;
-    try {
-      dom = await extractDOM(page);
-    } catch (err) {
-      const errorMsg = `Failed to extract DOM for "${name}": ${err.message}`;
-      console.error(`❌ ${errorMsg}`);
+    const domFile = path.join(pagesDir, `${name}.json`);
+    if (!fs.existsSync(domFile)) {
+      const errorMsg = `DOM JSON not found for page "${name}" at ${domFile}`;
+      console.log(`❌ ${errorMsg}`);
       results.push({ name, url, status: 'FAIL', error: errorMsg, priority, role });
       await page.close();
       continue;
     }
 
-    // Limitar tamanho do DOM convertido em string
-    const MAX_TOKENS_DOM = 6000;
-    let domString = JSON.stringify(dom, null, 2);
-    let limitedDomString = domString;
-
-    if (domString.length > MAX_TOKENS_DOM * 4) {
-      const limitedDom = dom.slice(0, 150); // reduz o número de elementos
-      limitedDomString = JSON.stringify(limitedDom, null, 2);
-    }
+    const dom = fs.readFileSync(domFile, 'utf8');
 
     const prompt = `
 You are a Playwright test/QA assistant.
 
 Given this DOM for the page "${name}" (role: ${role}, priority: ${priority}):
-${limitedDomString}
+${dom}
 
 Given this test scenario (natural language):
 ${description}
@@ -96,7 +88,7 @@ Respond ONLY with the raw JSON array. Do NOT include any explanation.
     let instructionsJSON;
     try {
       const completion = await openai.chat.completions.create({
-        model: 'gpt-4-turbo',
+        model: 'gpt-4',
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.2,
       });
@@ -155,15 +147,21 @@ Respond ONLY with the raw JSON array. Do NOT include any explanation.
           const { expectation, selector, value } = step;
           console.log(`🔎 Expecting selector "${selector}" to meet condition "${expectation}"`);
 
+          // Optional: screenshot for debug
           await page.screenshot({ path: `debug_${name}.png`, fullPage: true });
 
           let locator;
           if (/^getBy/.test(selector.trim())) {
-            locator = eval(`page.${selector.trim()}`);
+            try {
+              locator = eval(`page.${selector.trim()}`);
+            } catch (err) {
+              throw new Error(`❌ Invalid selector: ${selector}\n${err.message}`);
+            }
           } else {
             locator = page.locator(selector);
           }
 
+          // Find the first visible element
           const total = await locator.count();
           let locatorToUse = null;
           for (let i = 0; i < total; i++) {
@@ -202,5 +200,6 @@ Respond ONLY with the raw JSON array. Do NOT include any explanation.
   }
 
   await browser.close();
+
   generateReport(results);
 })();
